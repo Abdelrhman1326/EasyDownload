@@ -37,6 +37,8 @@ Example:  `C:\Program Files\ffmpeg-2025-09-10-git-c1dc2e2b7c-full_build\bin`
 
 4. Copy the `yt-dlp` folder into: C:\Program Files
 
+5. Add it's path to the environment varibales too: C:\Program Files\yt-dlp
+
 ---
 
 ## 3. Run the Application
