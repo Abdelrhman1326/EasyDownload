@@ -26,7 +26,7 @@ Example:  `C:\Program Files\ffmpeg-2025-09-10-git-c1dc2e2b7c-full_build\bin`
 
 ---
 
-## 2. Install yt-dlp
+### 2. Install yt-dlp
 
 1. Download the executable "named: yt-dlp.exe" from the official GitHub release page:  
 [yt-dlp.exe](https://github.com/yt-dlp/yt-dlp/releases/tag/2025.09.05)
