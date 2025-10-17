@@ -16,6 +16,23 @@ namespace APP
             Console.Write("Enter the YouTube URL: ");
             string url = Console.ReadLine();
 
+            // --- Asking for save location ---
+            Console.Write("Enter the download directory (e.g., C:\\Users\\Name\\Videos or ~/Downloads): ");
+            string downloadPath = Console.ReadLine().Trim();
+
+            if (string.IsNullOrEmpty(downloadPath))
+            {
+                 // Default to the current directory if no path is provided
+                 downloadPath = "."; 
+                 Console.WriteLine("No path entered. Saving to the current directory.");
+            }
+            // --------------------------------
+
+            // --- NEW: Asking for browser for cookies to fix 403 errors ---
+            Console.Write("Optional: Enter browser to use for cookies (e.g., chrome, firefox, edge) or press Enter to skip: ");
+            string browserName = Console.ReadLine().Trim().ToLower();
+            // -------------------------------------------------------------
+
             Console.Write("Do you want (1) Video or (2) Audio? ");
             string choice = Console.ReadLine();
 
@@ -24,12 +41,14 @@ namespace APP
                 // Audio mode
                 Console.Write("Which audio format do you want (mp3/m4a/wav/opus)? ");
                 string audioFormat = Console.ReadLine().Trim().ToLower();
-                DownloadAudio(url, audioFormat);
+                
+                // Pass the new browserName argument
+                DownloadAudio(url, audioFormat, downloadPath, browserName);
             }
             else if (choice == "1")
             {
                 // Video mode
-                Console.WriteLine("\nFetching available video resolutions\n");
+                Console.WriteLine("\nFetching available MP4 video resolutions...");
                 var resolutions = GetAvailableMP4Resolutions(url);
 
                 if (resolutions.Count == 0)
@@ -42,15 +61,20 @@ namespace APP
                 for (int i = 0; i < resolutions.Count; i++)
                     Console.WriteLine($"{i + 1}) {resolutions[i]}p");
 
-                Console.Write("\nEnter choice number: ");
+                Console.Write("\nEnter choice number (or press Enter for highest quality): ");
+                
                 if (!int.TryParse(Console.ReadLine(), out int choiceNum) || choiceNum < 1 || choiceNum > resolutions.Count)
+                {
                     choiceNum = resolutions.Count; // default to highest
+                    Console.WriteLine($"Defaulting to highest resolution: {resolutions[choiceNum - 1]}p");
+                }
 
                 string selectedRes = resolutions[choiceNum - 1].ToString();
                 Console.WriteLine($"\nDownloading {selectedRes}p video...\n");
 
-                // Download best MP4 video+audio at chosen resolution
-                DownloadVideo(url, $"bestvideo[ext=mp4][height<={selectedRes}]+bestaudio[ext=m4a]/best[ext=mp4]");
+                // Pass the new browserName argument
+                string formatCode = $"bestvideo[ext=mp4][height<={selectedRes}]+bestaudio[ext=m4a]/best[ext=mp4]";
+                DownloadVideo(url, formatCode, downloadPath, browserName);
             }
             else
             {
@@ -90,9 +114,10 @@ namespace APP
         {
             List<int> resolutions = new List<int>();
 
+            // We must quote the URL here too to prevent issues with -F
             Process process = new Process();
             process.StartInfo.FileName = "yt-dlp";
-            process.StartInfo.Arguments = $"-F {url}";
+            process.StartInfo.Arguments = $"-F \"{url}\"";
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.RedirectStandardError = true;
@@ -118,22 +143,34 @@ namespace APP
             return sortedRes;
         }
 
-        static void DownloadVideo(string url, string formatCode)
+        // --- MODIFIED: Added browserName argument ---
+        static void DownloadVideo(string url, string formatCode, string outputPath, string browserName)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("\nDownloading video...\n");
             Console.ResetColor();
+            
+            // Build the cookie arguments if a browser name was provided
+            string cookieArgs = string.IsNullOrEmpty(browserName) ? "" : $"--cookies-from-browser {browserName}";
 
-            RunYtDlp($"-f {formatCode} {url}");
+            // Construct the argument string: -f {format} {cookieArgs} -o "{path}/%(title)s.%(ext)s" "{url}"
+            string args = $"-f {formatCode} {cookieArgs} -o \"{outputPath}/%(title)s.%(ext)s\" \"{url}\"";
+            RunYtDlp(args);
         }
 
-        static void DownloadAudio(string url, string audioFormat)
+        // --- MODIFIED: Added browserName argument ---
+        static void DownloadAudio(string url, string audioFormat, string outputPath, string browserName)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"\nDownloading audio ({audioFormat})...\n");
             Console.ResetColor();
 
-            RunYtDlp($"-x --audio-format {audioFormat} {url}");
+            // Build the cookie arguments if a browser name was provided
+            string cookieArgs = string.IsNullOrEmpty(browserName) ? "" : $"--cookies-from-browser {browserName}";
+            
+            // Construct the argument string: -x --audio-format {format} {cookieArgs} -o "{path}/%(title)s.%(ext)s" "{url}"
+            string args = $"-x --audio-format {audioFormat} {cookieArgs} -o \"{outputPath}/%(title)s.%(ext)s\" \"{url}\"";
+            RunYtDlp(args);
         }
 
         static void RunYtDlp(string args)
@@ -150,13 +187,14 @@ namespace APP
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
+                    // Check for progress indicator
                     if (e.Data.Contains("%"))
                     {
-                        int percentIndex = e.Data.IndexOf('%');
-                        int start = e.Data.LastIndexOf(' ', percentIndex) + 1;
-                        if (start > 0 && percentIndex > start)
+                        // Use a more robust check to find the percentage value
+                        Match match = Regex.Match(e.Data, @"\d+\.?\d*\%");
+                        if (match.Success)
                         {
-                            string percent = e.Data.Substring(start, percentIndex - start + 1).Trim();
+                            string percent = match.Value.Trim();
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.Write($"\rDownloading... {percent}   ");
                             Console.ResetColor();
@@ -164,6 +202,7 @@ namespace APP
                     }
                     else
                     {
+                        // Print other output lines from yt-dlp (e.g., merging, writing info)
                         Console.WriteLine(e.Data);
                     }
                 }
