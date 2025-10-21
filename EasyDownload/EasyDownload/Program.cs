@@ -57,6 +57,7 @@ namespace APP
                     return;
                 }
 
+                
                 Console.WriteLine("Available video resolutions:");
                 for (int i = 0; i < resolutions.Count; i++)
                     Console.WriteLine($"{i + 1}) {resolutions[i]}p");
