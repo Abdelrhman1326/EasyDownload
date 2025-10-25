@@ -1,0 +1,24 @@
+=========== EasyDownload Log ===========
+Date: 10/25/2025 2:46:49 PM
+
+URL: https://www.youtube.com/playlist?list=PLIhvC56v63ILPDA2DQBv0IKzqsWTZxCkp
+Download Directory: /home/abdelrhman/Downloads/Python (by NetworkChunk)
+
+✅ Successes (14):
+you need to learn Python RIGHT NOW!! ⧸⧸ EP 1
+let’s go deeper into Python!! ⧸⧸ Python RIGHT NOW!! ⧸⧸ EP 2
+do you need to be good at MATH to learn Python？ ⧸⧸ Python RIGHT NOW!! ⧸⧸ EP 3
+If Else Statements in Python ⧸⧸ Python RIGHT NOW!! ⧸⧸ EP 4
+if if if if if...
+Python Logical Operators (the fun stuff!!)
+what is a List in Python？
+what is a List in Python？
+Adding stuff to a Python List
+Adding stuff to a Python List
+deleting stuff from Python Lists ⧸⧸ Python RIGHT NOW!! ⧸⧸ EP 9
+deleting stuff from Python Lists ⧸⧸ Python RIGHT NOW!! ⧸⧸ EP 9
+why are TUPLES even a thing？
+why are TUPLES even a thing？
+
+❌ Failures (0):
+

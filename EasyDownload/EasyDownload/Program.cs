@@ -1,225 +1,148 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Threading;
 
-namespace APP
+class Program
 {
-    class EasyDownload
+    static async Task Main()
     {
-        static void Main(string[] args)
+        Console.WriteLine("############## Welcome to EasyDownload ##############");
+        Console.WriteLine("Download YouTube videos easily and without struggling\n");
+
+        Console.Write("Enter the YouTube URL: ");
+        string url = Console.ReadLine()?.Trim() ?? "";
+
+        Console.Write("Enter the download directory (e.g., C:\\Users\\Name\\Videos or ~/Downloads): ");
+        string directory = Console.ReadLine()?.Trim() ?? "";
+
+        Console.Write("Optional: Enter browser to use for cookies (chrome, firefox, edge) or press Enter to skip: ");
+        string browser = Console.ReadLine()?.Trim() ?? "";
+
+        Console.Write("Do you want (1) Video or (2) Audio? ");
+        string choice = Console.ReadLine()?.Trim() ?? "1";
+
+        string type = choice == "2" ? "Audio" : "Video";
+        string format;
+
+        if (type == "Video")
         {
-            // welcome screen
-            WelcomeScreen();
+            Console.WriteLine("\nChoose preferred resolution:");
+            Console.WriteLine("1. 144p\n2. 240p\n3. 360p\n4. 480p\n5. 720p\n6. 1080p\n7. Best Available");
+            Console.Write("Enter choice (1-7): ");
+            string resChoice = Console.ReadLine()?.Trim() ?? "7";
 
-            Console.Write("Enter the YouTube URL: ");
-            string url = Console.ReadLine();
-
-            // --- Asking for save location ---
-            Console.Write("Enter the download directory (e.g., C:\\Users\\Name\\Videos or ~/Downloads): ");
-            string downloadPath = Console.ReadLine().Trim();
-
-            if (string.IsNullOrEmpty(downloadPath))
+            string resolution = resChoice switch
             {
-                 // Default to the current directory if no path is provided
-                 downloadPath = "."; 
-                 Console.WriteLine("No path entered. Saving to the current directory.");
-            }
-            // --------------------------------
-
-            // --- NEW: Asking for browser for cookies to fix 403 errors ---
-            Console.Write("Optional: Enter browser to use for cookies (e.g., chrome, firefox, edge) or press Enter to skip: ");
-            string browserName = Console.ReadLine().Trim().ToLower();
-            // -------------------------------------------------------------
-
-            Console.Write("Do you want (1) Video or (2) Audio? ");
-            string choice = Console.ReadLine();
-
-            if (choice == "2")
-            {
-                // Audio mode
-                Console.Write("Which audio format do you want (mp3/m4a/wav/opus)? ");
-                string audioFormat = Console.ReadLine().Trim().ToLower();
-                
-                // Pass the new browserName argument
-                DownloadAudio(url, audioFormat, downloadPath, browserName);
-            }
-            else if (choice == "1")
-            {
-                // Video mode
-                Console.WriteLine("\nFetching available MP4 video resolutions...");
-                var resolutions = GetAvailableMP4Resolutions(url);
-
-                if (resolutions.Count == 0)
-                {
-                    Console.WriteLine("No downloadable MP4 video formats found!");
-                    return;
-                }
-
-                
-                Console.WriteLine("Available video resolutions:");
-                for (int i = 0; i < resolutions.Count; i++)
-                    Console.WriteLine($"{i + 1}) {resolutions[i]}p");
-
-                Console.Write("\nEnter choice number (or press Enter for highest quality): ");
-                
-                if (!int.TryParse(Console.ReadLine(), out int choiceNum) || choiceNum < 1 || choiceNum > resolutions.Count)
-                {
-                    choiceNum = resolutions.Count; // default to highest
-                    Console.WriteLine($"Defaulting to highest resolution: {resolutions[choiceNum - 1]}p");
-                }
-
-                string selectedRes = resolutions[choiceNum - 1].ToString();
-                Console.WriteLine($"\nDownloading {selectedRes}p video...\n");
-
-                // Pass the new browserName argument
-                string formatCode = $"bestvideo[ext=mp4][height<={selectedRes}]+bestaudio[ext=m4a]/best[ext=mp4]";
-                DownloadVideo(url, formatCode, downloadPath, browserName);
-            }
-            else
-            {
-                Console.WriteLine("Invalid choice. Exiting...");
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\nDownload finished!");
-            Console.ResetColor();
-        }
-
-        static void WelcomeScreen()
-        {
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
-            PrintWithDelay("############## Welcome to EasyDownload ##############", 30);
-            Console.Write("download");
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write(" YouTube ");
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
-            Console.WriteLine("videos easily and without struggling");
-            Console.WriteLine();
-            Console.ResetColor();
-        }
-
-        static void PrintWithDelay(string text, int delayMS)
-        {
-            foreach (char c in text)
-            {
-                Console.Write(c);
-                Thread.Sleep(delayMS);
-            }
-            Console.WriteLine();
-        }
-
-        static List<int> GetAvailableMP4Resolutions(string url)
-        {
-            List<int> resolutions = new List<int>();
-
-            // We must quote the URL here too to prevent issues with -F
-            Process process = new Process();
-            process.StartInfo.FileName = "yt-dlp";
-            process.StartInfo.Arguments = $"-F \"{url}\"";
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.CreateNoWindow = true;
-
-            process.Start();
-            string output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            // Match lines that contain MP4 video formats (ignore webm)
-            var regex = new Regex(@"(?<id>\d+)\s+mp4\s+(?<res>\d+)x\d+");
-            var matches = regex.Matches(output);
-
-            HashSet<int> resSet = new HashSet<int>();
-            foreach (Match match in matches)
-            {
-                if (int.TryParse(match.Groups["res"].Value, out int h))
-                    resSet.Add(h);
-            }
-
-            List<int> sortedRes = new List<int>(resSet);
-            sortedRes.Sort();
-            return sortedRes;
-        }
-
-        // --- MODIFIED: Added browserName argument ---
-        static void DownloadVideo(string url, string formatCode, string outputPath, string browserName)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("\nDownloading video...\n");
-            Console.ResetColor();
-            
-            // Build the cookie arguments if a browser name was provided
-            string cookieArgs = string.IsNullOrEmpty(browserName) ? "" : $"--cookies-from-browser {browserName}";
-
-            // Construct the argument string: -f {format} {cookieArgs} -o "{path}/%(title)s.%(ext)s" "{url}"
-            string args = $"-f {formatCode} {cookieArgs} -o \"{outputPath}/%(title)s.%(ext)s\" \"{url}\"";
-            RunYtDlp(args);
-        }
-
-        // --- MODIFIED: Added browserName argument ---
-        static void DownloadAudio(string url, string audioFormat, string outputPath, string browserName)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\nDownloading audio ({audioFormat})...\n");
-            Console.ResetColor();
-
-            // Build the cookie arguments if a browser name was provided
-            string cookieArgs = string.IsNullOrEmpty(browserName) ? "" : $"--cookies-from-browser {browserName}";
-            
-            // Construct the argument string: -x --audio-format {format} {cookieArgs} -o "{path}/%(title)s.%(ext)s" "{url}"
-            string args = $"-x --audio-format {audioFormat} {cookieArgs} -o \"{outputPath}/%(title)s.%(ext)s\" \"{url}\"";
-            RunYtDlp(args);
-        }
-
-        static void RunYtDlp(string args)
-        {
-            Process process = new Process();
-            process.StartInfo.FileName = "yt-dlp";
-            process.StartInfo.Arguments = args;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.CreateNoWindow = true;
-
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    // Check for progress indicator
-                    if (e.Data.Contains("%"))
-                    {
-                        // Use a more robust check to find the percentage value
-                        Match match = Regex.Match(e.Data, @"\d+\.?\d*\%");
-                        if (match.Success)
-                        {
-                            string percent = match.Value.Trim();
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.Write($"\rDownloading... {percent}   ");
-                            Console.ResetColor();
-                        }
-                    }
-                    else
-                    {
-                        // Print other output lines from yt-dlp (e.g., merging, writing info)
-                        Console.WriteLine(e.Data);
-                    }
-                }
+                "1" => "144",
+                "2" => "240",
+                "3" => "360",
+                "4" => "480",
+                "5" => "720",
+                "6" => "1080",
+                _ => "9999"
             };
 
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data) && !e.Data.Contains("%"))
-                    Console.WriteLine(e.Data);
-            };
+            format = resolution == "9999"
+                ? "bestvideo+bestaudio/best"
+                : $"bestvideo[height<={resolution}]+bestaudio/best[height<={resolution}]";
+        }
+        else
+        {
+            format = "bestaudio";
+        }
 
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            process.WaitForExit();
+        string cookiesOption = string.IsNullOrEmpty(browser) ? "" : $"--cookies-from-browser {browser}";
+        Directory.CreateDirectory(directory);
+
+        Console.WriteLine($"\nDownloading {type.ToLower()} at selected quality...\n");
+
+        List<string> successList = new();
+        List<string> failedList = new();
+
+        string arguments =
+            $"{cookiesOption} -f \"{format}\" -o \"{directory}/%(title)s.%(ext)s\" \"{url}\" " +
+            "--merge-output-format mp4 --no-abort-on-error --newline --ignore-errors";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "yt-dlp",
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        Process process = new Process { StartInfo = psi };
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (string.IsNullOrEmpty(e.Data)) return;
+
+            Console.WriteLine(e.Data);
+
+            if (e.Data.Contains("[download] Destination:"))
+            {
+                string title = ExtractTitle(e.Data);
+                if (!string.IsNullOrEmpty(title))
+                    successList.Add(title);
+            }
+            if (e.Data.Contains("ERROR:"))
+            {
+                string title = ExtractTitle(e.Data);
+                failedList.Add(string.IsNullOrEmpty(title) ? "Unknown" : title);
+            }
+        };
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+                Console.WriteLine(e.Data);
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        await process.WaitForExitAsync();
+
+        Console.WriteLine("\nDownload finished!\n");
+        Console.WriteLine("==================== DOWNLOAD SUMMARY ====================");
+        Console.WriteLine($"✅ Successful downloads: {successList.Count}");
+        Console.WriteLine($"❌ Failed downloads: {failedList.Count}\n");
+
+        if (successList.Count > 0)
+        {
+            Console.WriteLine("--- Successful Videos ---");
+            foreach (var title in successList)
+                Console.WriteLine($"✔ {title}");
             Console.WriteLine();
         }
+
+        if (failedList.Count > 0)
+        {
+            Console.WriteLine("--- Failed Videos ---");
+            foreach (var title in failedList)
+                Console.WriteLine($"✖ {title}");
+            Console.WriteLine();
+        }
+
+        string logFile = Path.Combine(Directory.GetCurrentDirectory(), "download_log.txt");
+        await File.WriteAllTextAsync(logFile,
+            "=========== EasyDownload Log ===========\n" +
+            $"Date: {DateTime.Now}\n\n" +
+            $"URL: {url}\nDownload Directory: {directory}\n\n" +
+            $"✅ Successes ({successList.Count}):\n{string.Join("\n", successList)}\n\n" +
+            $"❌ Failures ({failedList.Count}):\n{string.Join("\n", failedList)}\n");
+
+        Console.WriteLine($"Log saved to: {logFile}\n");
+    }
+
+    static string ExtractTitle(string line)
+    {
+        var match = Regex.Match(line, @"Destination:\s*(.*)\.\w+$");
+        if (match.Success)
+            return Path.GetFileNameWithoutExtension(match.Groups[1].Value);
+        return "";
     }
 }
