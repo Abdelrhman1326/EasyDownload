@@ -59,9 +59,6 @@ class Program
 
         Console.WriteLine($"\nDownloading {type.ToLower()} at selected quality...\n");
 
-        List<string> successList = new();
-        List<string> failedList = new();
-
         string arguments =
             $"{cookiesOption} -f \"{format}\" -o \"{directory}/%(title)s.%(ext)s\" \"{url}\" " +
             "--merge-output-format mp4 --no-abort-on-error --newline --ignore-errors";
@@ -79,21 +76,8 @@ class Program
         Process process = new Process { StartInfo = psi };
         process.OutputDataReceived += (sender, e) =>
         {
-            if (string.IsNullOrEmpty(e.Data)) return;
-
-            Console.WriteLine(e.Data);
-
-            if (e.Data.Contains("[download] Destination:"))
-            {
-                string title = ExtractTitle(e.Data);
-                if (!string.IsNullOrEmpty(title))
-                    successList.Add(title);
-            }
-            if (e.Data.Contains("ERROR:"))
-            {
-                string title = ExtractTitle(e.Data);
-                failedList.Add(string.IsNullOrEmpty(title) ? "Unknown" : title);
-            }
+            if (!string.IsNullOrEmpty(e.Data))
+                Console.WriteLine(e.Data);
         };
         process.ErrorDataReceived += (sender, e) =>
         {
@@ -106,36 +90,7 @@ class Program
         process.BeginErrorReadLine();
         await process.WaitForExitAsync();
 
-        Console.WriteLine("\nDownload finished!\n");
-        Console.WriteLine("==================== DOWNLOAD SUMMARY ====================");
-        Console.WriteLine($"✅ Successful downloads: {successList.Count}");
-        Console.WriteLine($"❌ Failed downloads: {failedList.Count}\n");
-
-        if (successList.Count > 0)
-        {
-            Console.WriteLine("--- Successful Videos ---");
-            foreach (var title in successList)
-                Console.WriteLine($"✔ {title}");
-            Console.WriteLine();
-        }
-
-        if (failedList.Count > 0)
-        {
-            Console.WriteLine("--- Failed Videos ---");
-            foreach (var title in failedList)
-                Console.WriteLine($"✖ {title}");
-            Console.WriteLine();
-        }
-
-        string logFile = Path.Combine(Directory.GetCurrentDirectory(), "download_log.txt");
-        await File.WriteAllTextAsync(logFile,
-            "=========== EasyDownload Log ===========\n" +
-            $"Date: {DateTime.Now}\n\n" +
-            $"URL: {url}\nDownload Directory: {directory}\n\n" +
-            $"✅ Successes ({successList.Count}):\n{string.Join("\n", successList)}\n\n" +
-            $"❌ Failures ({failedList.Count}):\n{string.Join("\n", failedList)}\n");
-
-        Console.WriteLine($"Log saved to: {logFile}\n");
+        Console.WriteLine("\n✅ Download finished!");
     }
 
     static string ExtractTitle(string line)
